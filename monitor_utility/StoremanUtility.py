@@ -111,37 +111,4 @@ class StoremanUtility:
 
 if __name__ == '__main__':
     utl = StoremanUtility('main','E:\Automation\github\cross_asset_monitor\.iWAN_config.json',print_flag=True)
-    gr = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "result": {
-            "groupId": "0x000000000000000000000000000000000000000000000000006465765f303232",
-            "status": "5",
-            "deposit": "307199999999999999953800",
-            "depositWeight": "435649999999999999930700",
-            "selectedCount": "25",
-            "memberCount": "25",
-            "whiteCount": "1",
-            "whiteCountAll": "11",
-            "startTime": "1623211200",
-            "endTime": "1623816000",
-            "registerTime": "1623121135",
-            "registerDuration": "10875",
-            "memberCountDesign": "25",
-            "threshold": "17",
-            "chain1": "2153201998",
-            "chain2": "2147483708",
-            "curve1": "1",
-            "curve2": "0",
-            "tickedCount": "0",
-            "minStakeIn": "10000000000000000000000",
-            "minDelegateIn": "100000000000000000000",
-            "minPartIn": "10000000000000000000000",
-            "crossIncoming": "0",
-            "gpk1": "0x10b3eb33a8b430561bb38404444c587e47247205771a40969ceabe0c08423ab220b5ddf25f856b71f6bb54cea88bceaa1bbe917f5d903ff82691a345ea4e0556",
-            "gpk2": "0xca8ef3a93b2819851e3587dc0906a7e6563ab55ab4f8de76077813df03becc21a9a10957256667fbe3bca2aecd2db0ae5d76b8e8a636dc61e1b960a32b105bdb",
-            "delegateFee": "1000"
-        }
-    }
-
-    print(utl.getGroupStatus(5))
+    print(utl.getWorkingGroupsDetails())

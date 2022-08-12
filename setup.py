@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="monitor_utility",
-    version="0.0.1",
+    version="0.0.10",
     author="vSir",
     author_email="weiguo341@gmail.com",
     description="simple tool",

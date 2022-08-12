@@ -86,6 +86,23 @@ class TokenPairsUtility:
         LockedAccounts.update(evmLockedAccounts)
         LockedAccounts.update(noEVMLockedAccout)
         return LockedAccounts
+    def getLockedAccountForMultiGrps(self,working_groups:list):
+        '''
+        :param working_groups: [group1ID,group2ID]
+        :return:
+        '''
+        LockedAccs_allGroups = {}
+        for wk_grp in working_groups:
+            grInfo = self.iwan.sendRequest(iWAN_Request.getStoremanGrpInfo(wk_grp))
+            print(grInfo)
+            LockedAccs = self.getLockedAccount(grInfo)
+            for chain, locked_account in LockedAccs.items():
+                if not LockedAccs_allGroups.get(chain):
+                    LockedAccs_allGroups[chain] = [locked_account]
+                else:
+                    if locked_account not in LockedAccs_allGroups[chain]:
+                        LockedAccs_allGroups[chain].append(locked_account)
+        return LockedAccs_allGroups
     def getChainDict(self):
         '''
         :return: chainIdDict,chainAbbr,noEVMChains
@@ -110,38 +127,64 @@ class TokenPairsUtility:
         poolTokenInfo = self.getPoolTokenInfo()
         poolTokenIDList = [int(i) for i in list(poolTokenInfo.keys())]
         for tokenPairID in poolTokenIDList:
-            poolTokenDict[poolTokenInfo[str(tokenPairID)]['Asset']]={'TokenAddress':poolTokenInfo[str(tokenPairID)]['TokenAddress']}
-            poolTokenDict[poolTokenInfo[str(tokenPairID)]['Asset']]['PoolScAddress'] = poolTokenInfo[str(tokenPairID)]['PoolScAddress']
-            poolTokenDict[poolTokenInfo[str(tokenPairID)]['Asset']]['originalAmount'] = poolTokenInfo[str(tokenPairID)]['originalAmount']
+            Asset = poolTokenInfo[str(tokenPairID)]['Asset']
+            chainType = poolTokenInfo[str(tokenPairID)]['chainType']
+            if not poolTokenDict.get(Asset):
+                poolTokenDict[Asset] = {chainType:{}}
+            if not  poolTokenDict[Asset].get(chainType):
+                poolTokenDict[Asset][chainType] = {}
+            poolTokenDict[Asset][chainType]['TokenAddress'] = poolTokenInfo[str(tokenPairID)]['TokenAddress']
+            poolTokenDict[Asset][chainType]['PoolScAddress'] = poolTokenInfo[str(tokenPairID)]['PoolScAddress']
+            poolTokenDict[Asset][chainType]['originalAmount'] = poolTokenInfo[str(tokenPairID)]['originalAmount']
         return poolTokenDict, poolTokenIDList
+
     def getassetCCDit(self):
         '''
         :return: assetCCDit:
                 {
-                "LTC": {
-                    "OriginalChain": {
-                        "Litcoin": "0x0000000000000000000000000000000000000000"
-                    },
-                    "MapChain": [
-                        {
-                            "Wanchain": "0xd8e7bd03920ba407d764789b11dd2b5eaee0961e"
+                    "ETH": {
+                        "OriginalChains": {
+                            "Ethereum": {
+                                "TokenAddr": "0x0000000000000000000000000000000000000000",
+                                "ancestorDecimals": "18",
+                                "assetType": "coin_evm"
+                            }
                         },
-                        {
-                            "Ethereum": "0x6ec534cc08e7318c35220daf2b2bd8ae63878385"
-                        },
-                        {
-                            "BSC": "0xdd4b9b3ce03faaba4a3839c8b5023b7792be6e2c"
+                        "MapChain": {
+                            "Wanchain": {
+                                "TokenAddr": "0xe3ae74d1518a76715ab4c7bedf1af73893cd435a",
+                                "decimals": "18",
+                                "assetType": "token_evm"
+                            },
+                            "Avalanche": {
+                                "TokenAddr": "0x265fc66e84939f36d90ee38734afe4a770d2c114",
+                                "decimals": "18",
+                                "assetType": "token_evm"
+                            },
+                            "Moonriver": {
+                                "TokenAddr": "0x576fde3f61b7c97e381c94e7a03dbc2e08af1111",
+                                "decimals": "18",
+                                "assetType": "token_evm"
+                            },
+                            "XinFin": {
+                                "TokenAddr": "0x1289f70b8a16797cccbfcca8a845f36324ac9f8b",
+                                "decimals": "18",
+                                "assetType": "token_evm"
+                            },
+                            "OKT": {
+                                "TokenAddr": "0x4d14963528a62c6e90644bfc8a419cc41dc15588",
+                                "decimals": "18",
+                                "assetType": "token_evm"
+                            }
                         }
-                    ],
-                    "CCType":"Pool"
-                }
-            }
+                    }
         supportChains = ["Wanchain","Ethereum","BSC"]
         '''
         assetCCDit = {}
         supportMapChains = []
         tokenPairs = self.getTokenPairs()
         chainIdDict, chainAbbr, noEVMChains = self.getChainDict()
+        print(noEVMChains)
         poolTokenDict, poolTokenIDList = self.getPoolTokenDict()
         for tokenPair in tokenPairs['result']:
             '''
@@ -178,64 +221,52 @@ class TokenPairsUtility:
                         "decimals": "18"
                     }
             '''
-            # if chainIDdit.get(tokenPair['fromChainID']): #确保新增链已加入到监控
-            #     if tokenPair['toChainID'] not in toBlackList:
-            #         asset = tokenPair['ancestorSymbol']
-            #         if not assetCCDit.get(asset):  # 如果没有记录，将资产记录到
-            #             decimal = tokenPair['ancestorDecimals']
-            #             assetCCDit[asset]={}
-            #             if tokenPair['ancestorChainID'] == tokenPair['fromChainID']:
-            #                 OriginalChain = chainIDdit[tokenPair['ancestorChainID']]
-            #                 OriginalChainTokenAddr = tokenPair['fromAccount']
-            #                 assetCCDit[asset]['OriginalChain'] = {OriginalChain: OriginalChainTokenAddr}
-            #                 assetCCDit[asset]['OriginalChain']['Decimal']= decimal
-            #
-            #             MapChain = chainIDdit[tokenPair['toChainID']]
-            #             MapChainTokenAddr = tokenPair['toAccount']
-            #             assetCCDit[asset]['MapChain']={}
-            #             assetCCDit[asset]['MapChain'][MapChain] = MapChainTokenAddr
-            #             supportMapChains.append(MapChain)
-            #
-            #         else:  ##如果有记录，进行mapChain信息补充
-            #             if tokenPair['ancestorChainID'] == tokenPair['fromChainID']:
-            #                 OriginalChain = chainIDdit[tokenPair['ancestorChainID']]
-            #                 OriginalChainTokenAddr = tokenPair['fromAccount']
-            #                 assetCCDit[asset]['OriginalChain'] = {OriginalChain: OriginalChainTokenAddr}
-            #             MapChain = chainIDdit[tokenPair['toChainID']]
-            #             MapChainTokenAddr = tokenPair['toAccount']
-            #             assetCCDit[asset]['MapChain'][MapChain] = MapChainTokenAddr
-            #         supportMapChains.append(MapChain)
-            #
-            #         if int(tokenPair['id']) in poolTokenList:
-            #             assetCCDit[asset]['CCType'] = 'PoolToken'
-            #             print(json.dumps(assetCCDit))
             if chainIdDict.get(tokenPair['fromChainID']):# to ensure the new chain has been added to chainInfo(github:https://github.com/Nevquit/configW/blob/main/chainInfos.json)
+                # init the asset dict
                 asset = tokenPair['ancestorSymbol']
-                if not assetCCDit.get(asset):  # 如果没有记录，将资产记录到
+                if not assetCCDit.get(asset):
                     assetCCDit[asset]={'OriginalChains':{},'MapChain':{}}
 
+                # fill the OriginalChain part
                 if tokenPair['ancestorChainID'] == tokenPair['fromChainID']:
                     OriginalChain = chainIdDict[tokenPair['ancestorChainID']]
-                    assetCCDit[asset]['OriginalChains'][OriginalChain]={'TokenAddr':tokenPair['fromAccount'],'ancestorDecimals': tokenPair['ancestorDecimals']}
+                    if chainAbbr[OriginalChain] in noEVMChains:
+                        assetType = 'coin_noEvm'
+                    elif tokenPair['fromAccount'] == '0x0000000000000000000000000000000000000000':
+                        assetType = 'coin_evm'
+                    else:
+                        assetType = 'token_evm'
+                    assetCCDit[asset]['OriginalChains'][OriginalChain]={'TokenAddr':tokenPair['fromAccount'],'ancestorDecimals': tokenPair['ancestorDecimals'],'assetType':assetType,'chainType':chainAbbr[OriginalChain],'ccType':'normal'}
 
+                # fill the MapChain part
                 MapChain = chainIdDict[tokenPair['toChainID']]
-                assetCCDit[asset]['MapChain'][MapChain] = {'TokenAddr':tokenPair['toAccount'],'decimals':tokenPair['decimals']}
+                if chainAbbr[MapChain] in noEVMChains:
+                    assetType = 'coin_noEvm'
+                elif tokenPair['toAccount'] == '0x0000000000000000000000000000000000000000':
+                    assetType = 'coin_evm'
+                else:
+                    assetType = 'token_evm'
+                ## tag special cross type, need add asset to original chains if the asset is pool token
+                if int(tokenPair['id']) in poolTokenIDList:
+                    assetCCDit[asset]['OriginalChains'][MapChain] = {'TokenAddr': tokenPair['toAccount'],'ancestorDecimals': tokenPair['decimals'], 'assetType': assetType, 'chainType': chainAbbr[MapChain],'ccType':'pool'}
+                assetCCDit[asset]['MapChain'][MapChain] = {'TokenAddr':tokenPair['toAccount'],'decimals':tokenPair['decimals'],'assetType':assetType,'chainType':chainAbbr[MapChain]}
+
+                # summary mapped chains
                 supportMapChains.append(MapChain)
 
-                if int(tokenPair['id']) in poolTokenIDList:
-                    assetCCDit[asset]['CCType'] = 'Pool'
 
         #delete the original chain from mappchain dic
         for asset,assetDetail in assetCCDit.items():
             oriChains = list(assetDetail['OriginalChains'].keys())
             for chain in oriChains:
                 assetDetail['MapChain'].pop(chain,'')
+
         return assetCCDit,list(set(supportMapChains))
 
 
 if __name__ == '__main__':
     utl = TokenPairsUtility('main','E:\Automation\github\cross_asset_monitor\.iWAN_config.json',print_flag=True)
-    gr = {
+    grs = {
         "jsonrpc": "2.0",
         "id": 1,
         "result": {
@@ -267,5 +298,9 @@ if __name__ == '__main__':
             "delegateFee": "1000"
         }
     }
-    print(utl.getassetCCDit())
+    wk_groups = ['0x000000000000000000000000000000000000000000000041726965735f303231']
+
+    # print(json.dumps(utl.getLockedAccountForMultiGrps(wk_groups)))
+    print(json.dumps(utl.getassetCCDit()))
+
 

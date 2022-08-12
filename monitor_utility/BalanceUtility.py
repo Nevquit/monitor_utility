@@ -31,7 +31,7 @@ class BalanceUtility:
     def pprint(self,*args,**kwargs):
         if self.print_flag :
             print(*args,**kwargs)
-    def getEVMChainCoinBalanceViaIwan(self,account, chain):
+    def getEVMChainCoinBalanceViaIwan(self,account,chain):
         '''
         :param account:
         :param chain:
@@ -40,7 +40,7 @@ class BalanceUtility:
         '''
         result = self.iwan.sendRequest(iWAN_Request.getBalance(account, chain))
         return result
-    def getEVMChainTokenBalanceViaIwan(self,chainType,account, tokenScAddr):
+    def getEVMChainTokenBalanceViaIwan(self,chainType,account,tokenScAddr):
         '''
 
         :param chainType:
@@ -51,6 +51,15 @@ class BalanceUtility:
         '''
         result = self.iwan.sendRequest(iWAN_Request.getTokenBalance(chainType, account, tokenScAddr))
         return result
+    def getMapToeknTotalSupply(self,chainType, tokenScAddr):
+        '''
+
+        :param chainType:
+        :param tokenScAddr:
+        :return: {"jsonrpc": "2.0", "id": 1, "result": "31924999999999995"} #wei
+        '''
+        totalSupply = self.iwan.sendRequest(iWAN_Request.getTokenSupply(chainType, tokenScAddr))
+        return totalSupply
     def getBTCsBalanceViaNode(self,node,user,password,address):
         '''
         :param node BTC/LTC/DOGE
@@ -84,7 +93,8 @@ class BalanceUtility:
             return int(amount*100000000)
         except:
             return
-    def getBTCsBalance(self,chain,node,user,password,address):
+    def getBTCsBalance(self, **kwargs):# def getBTCsBalance(self,chain,node,user,password,address):
+
         '''
         get the balance from node,iwan,third part data
         :param chain:
@@ -92,18 +102,18 @@ class BalanceUtility:
         :return:
         '''
         balancePool = []
-        balance_iWAN = self.getBTCsBalanceViaIwan(chain, address)
+        balance_iWAN = self.getBTCsBalanceViaIwan(kwargs['chain'], kwargs['address'])
         if balance_iWAN:
             balancePool.append(balance_iWAN)
 
         if self.net == 'main':
             try:
-                balance_spider = BtcBalanceSpider.BtcBalanceSpider().getBTCBalance(chain,address)
+                balance_spider = BtcBalanceSpider.BtcBalanceSpider().getBTCBalance(kwargs['chain'], kwargs['address'])
             except:
                 balance_spider = None
             if balance_spider:
                 balancePool.append(balance_spider)
-        balance_Node = self.getBTCsBalanceViaNode(node,user,password,address)
+        balance_Node = self.getBTCsBalanceViaNode(kwargs['node'],kwargs['user'],kwargs['password'],kwargs['address'])
         if balance_Node:
             balancePool.append(balance_Node)
         if balancePool:
@@ -124,16 +134,18 @@ class BalanceUtility:
             return result.value['data']['free']  # unit wei
         except:
             return
-    def getDOTBalance(self, nodes:list,dotAddress):
+    def getDOTBalance(self,**kwargs):
+    # def getDOTBalance(self, nodes: list, address):
+
         '''
         :param nodes: [node1,node2,node3,...]
-        :param dotAddress:
+        :param address:
         :return:
         '''
         balancePool = []
-        urls = nodes
+        urls = kwargs['nodes']
         for url in urls:
-            balance = self.getDOTBalanceViaNode(url, dotAddress)
+            balance = self.getDOTBalanceViaNode(url, kwargs['address'])
             if balance:
                 balancePool.append(int(balance))
         if balancePool:
@@ -181,7 +193,9 @@ class BalanceUtility:
             return balance
         except Exception:
             self.pprint('{} : {} '.format(url,traceback.format_exc()))
-    def getXRPBalance(self,nodes:list,xrpAddress):
+    def getXRPBalance(self,**kwargs):
+    # def getXRPBalance(self, nodes: list, address):
+
         '''
         curl - H
         'Content-Type: application/json' - d
@@ -190,14 +204,14 @@ class BalanceUtility:
         '''
 
         balance_pool = []
-        urls = nodes
+        urls = kwargs['nodes']
         for url in urls:
-            balance = self.getXRPBalanceViaNode(url,xrpAddress)
+            balance = self.getXRPBalanceViaNode(url,kwargs['address'])
             if balance:
                 balance_pool.append(balance)
         if self.net =='main':
             try:
-                xrpbalance_spider = XrpBalanceSpider.XrpBalanceSpider().getXRPBalance(xrpAddress)
+                xrpbalance_spider = XrpBalanceSpider.XrpBalanceSpider().getXRPBalance(kwargs['address'])
             except:
                 self.pprint('xrpbalance_spider get failed due to {}'.format(traceback.format_exc()))
                 xrpbalance_spider = None
@@ -211,7 +225,7 @@ class BalanceUtility:
 
 
 if __name__ == '__main__':
-    utl = BalanceUtility('main','E:\Automation\github\cross_asset_monitor\.iWAN_config.json',print_flag=True)
+    utl = BalanceUtility('main','E:\Automation\github\cross_asset_monitor\.iWAN_config.json',print_flag=False)
     gr = {
         "jsonrpc": "2.0",
         "id": 1,
@@ -244,4 +258,5 @@ if __name__ == '__main__':
             "delegateFee": "1000"
         }
     }
-
+    args = {'nodes':['wss://nodes.wandevs.org/polkadot'],'address':'13NB3m2P3nw1wfzbHqMHQ3Y6cKZrFRk18r3Z8yt4fGKMb5Gx'}
+    print(utl.getDOTBalance(**args))
