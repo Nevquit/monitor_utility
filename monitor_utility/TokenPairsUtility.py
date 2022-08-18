@@ -184,7 +184,7 @@ class TokenPairsUtility:
         supportMapChains = []
         tokenPairs = self.getTokenPairs()
         chainIdDict, chainAbbr, noEVMChains = self.getChainDict()
-        print(noEVMChains)
+        # print(noEVMChains)
         poolTokenDict, poolTokenIDList = self.getPoolTokenDict()
         for tokenPair in tokenPairs['result']:
             '''
@@ -263,6 +263,16 @@ class TokenPairsUtility:
 
         return assetCCDit,list(set(supportMapChains))
 
+    def classify_asset(self):
+        '''
+        :parameter
+        :return:
+        '''
+        tokenPairs = self.getTokenPairs()
+        classify_asset = {}
+        for asset,assetInfo in tokenPairs['result']:
+            if not classify_asset.get(asset):
+                classify_asset[a]
 
 if __name__ == '__main__':
     utl = TokenPairsUtility('main','E:\Automation\github\cross_asset_monitor\.iWAN_config.json',print_flag=True)

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="monitor_utility",
-    version="0.0.10",
+    version="0.0.12",
     author="vSir",
     author_email="weiguo341@gmail.com",
     description="simple tool",
@@ -19,6 +19,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-    'iWAN','iWAN_Request','pubkey2address','substrate-interface==1.1','websocket-client==0.58.0'
+    'iWAN','iWAN_Request','pubkey2address','substrate-interface==1.1','websocket-client==0.58.0',"BalanceSpider","multicall==0.1.2","web3==5.28.0"
     ]
 )
