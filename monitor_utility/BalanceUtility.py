@@ -6,7 +6,6 @@ import requests
 import traceback
 from substrateinterface import SubstrateInterface # for DOT RPC
 from websocket import create_connection
-
 class BalanceUtility:
     def __init__(self,net,iWAN_Config,print_flag=False):
         '''
@@ -40,6 +39,14 @@ class BalanceUtility:
         '''
         result = self.iwan.sendRequest(iWAN_Request.getBalance(account, chain))
         return result
+    def getEVMChainCoinBalanceViaWeb3Rpc(self,accout,rpc):
+        '''
+        return decimal numeral, unit: wei
+        '''
+        headers = {"Content-Type": "application/json"}
+        rsp = requests.post(url = rpc,headers=headers,data = json.dumps({"jsonrpc":"2.0","method":"eth_getBalance","params":[accout, "latest"],"id":1}))
+        return int(rsp.json()['result'],16)
+
     def getEVMChainTokenBalanceViaIwan(self,chainType,account,tokenScAddr):
         '''
 

@@ -5,13 +5,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="monitor_utility",
-    version="0.0.12",
+    version="0.0.18",
     author="vSir",
     author_email="weiguo341@gmail.com",
     description="simple tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Nevquit/monitor_msg_tools",
+    url="https://github.com/Nevquit/monitor_utility",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
