@@ -1,27 +1,11 @@
+'''
+Author:GuoWei
+Purpose:Prepare token pairs related infos, need update the code when add new type token, this part based the iwan
+'''
 from iWAN import iWAN #pip install iWAN
 import json
-from pubkey2address import Gpk2BtcAddr,Gpk2DotAddr,Gpk2XrpAddr #pip install pubkey2address
 from iWAN_Request import iWAN_Request
-from monitor_utility.utility_evm_multicall import EMultilCall, eCall,to_baseUnit
-from monitor_utility.utility_rpc_provider import PROVIDER_SELECTOR
-from web3 import Web3
-from enum import Enum
-class AssetType(Enum):
-    XRP = 'xrp_coin'
-    XRP_TOKEN = 'xrp_token'
-    DOT = 'dot_coin'
-    BTC = 'btc_coin'
-    LTC = 'ltc_coin'
-    DOGE = 'doge_coin'
-    EVM = 'evm_coin'
-    EVM_ERC20 = 'evm_erc20'
-    EVM_ERC721 = 'evm_erc721'
-    EVM_ERC1155 = 'evm_erc1155'
 class TokenPairsUtility:
-    '''
-    LockedAccounts;
-    TokenPairs related infomations
-    '''
     def __init__(self,net,iWAN_Config,chainInfo:dict,crossPoolTokenInfo:dict,evmChainCrossSc:dict,print_flag=False):
         '''
         :param net: 'main'/'test'
@@ -175,50 +159,49 @@ class TokenPairsUtility:
     def get_asset_crosschain_dict(self):
         '''
         :return: assetCCDit:
-                {
-                    "ETH": {
-                        "OriginalChains": {
-                            "Ethereum": {
-                                "TokenAddr": "0x0000000000000000000000000000000000000000",
-                                "ancestorDecimals": "18",
-                                "assetType": "coin_evm"
-                            }
-                        },
-                        "MapChain": {
-                            "Wanchain": {
-                                "TokenAddr": "0xe3ae74d1518a76715ab4c7bedf1af73893cd435a",
-                                "decimals": "18",
-                                "assetType": "erc20_evm"
+                    {
+                        "ETH": {
+                            "OriginalChains": {
+                                "Ethereum": {
+                                    "TokenAddr": "0x0000000000000000000000000000000000000000",
+                                    "ancestorDecimals": "18",
+                                    "assetType": "coin_evm"
+                                }
                             },
-                            "Avalanche": {
-                                "TokenAddr": "0x265fc66e84939f36d90ee38734afe4a770d2c114",
-                                "decimals": "18",
-                                "assetType": "erc1155_evm"
-                            },
-                            "Moonriver": {
-                                "TokenAddr": "0x576fde3f61b7c97e381c94e7a03dbc2e08af1111",
-                                "decimals": "18",
-                                "assetType": "erc721_evm"
-                            },
-                            "XinFin": {
-                                "TokenAddr": "0x1289f70b8a16797cccbfcca8a845f36324ac9f8b",
-                                "decimals": "18",
-                                "assetType": "erc20_evm"
-                            },
-                            "OKT": {
-                                "TokenAddr": "0x4d14963528a62c6e90644bfc8a419cc41dc15588",
-                                "decimals": "18",
-                                "assetType": "erc20_evm"
+                            "MapChain": {
+                                "Wanchain": {
+                                    "TokenAddr": "0xe3ae74d1518a76715ab4c7bedf1af73893cd435a",
+                                    "decimals": "18",
+                                    "assetType": "erc20_evm"
+                                },
+                                "Avalanche": {
+                                    "TokenAddr": "0x265fc66e84939f36d90ee38734afe4a770d2c114",
+                                    "decimals": "18",
+                                    "assetType": "erc1155_evm"
+                                },
+                                "Moonriver": {
+                                    "TokenAddr": "0x576fde3f61b7c97e381c94e7a03dbc2e08af1111",
+                                    "decimals": "18",
+                                    "assetType": "erc721_evm"
+                                },
+                                "XinFin": {
+                                    "TokenAddr": "0x1289f70b8a16797cccbfcca8a845f36324ac9f8b",
+                                    "decimals": "18",
+                                    "assetType": "erc20_evm"
+                                },
+                                "OKT": {
+                                    "TokenAddr": "0x4d14963528a62c6e90644bfc8a419cc41dc15588",
+                                    "decimals": "18",
+                                    "assetType": "erc20_evm"
+                                }
                             }
                         }
-                    }
         supportChains = ["Wanchain","Ethereum","BSC"]
         '''
         assetCCDit = {}
         supportMapChains = []
         tokenPairs = self.get_token_pairs()
         chainIdDict, chainAbbr, noEVMChains = self.get_chain_dict()
-        # print(noEVMChains)
         poolTokenDict, poolTokenIDList = self.get_pool_token_dict()
         for tokenPair in tokenPairs['result']:
             '''
@@ -268,191 +251,80 @@ class TokenPairsUtility:
                         "toAccountIsLayer2": false
                     }
             '''
-            # to ensure the new chain has been added to chainInfo(github:https://github.com/Nevquit/configW/blob/main/chainInfos.json)
+            #To ensure the new chain has been added to chainInfo(github:https://github.com/Nevquit/configW/blob/main/chainInfos.json)
             if chainIdDict.get(tokenPair['fromChainID']):
-                # init the asset dict
                 asset = tokenPair['ancestorSymbol']
+                #1.init the asset dict
                 if not assetCCDit.get(asset):
                     assetCCDit[asset]={'OriginalChains':{},'MapChain':{}}
-                # fill the OriginalChain part
+                #2.fill the OriginalChain part
                 if tokenPair['ancestorChainID'] == tokenPair['fromChainID']:
                     OriginalChain = chainIdDict[tokenPair['ancestorChainID']]
-                    #handle the evm chain assets
+                    #2.1 asset type: no evm
                     if chainAbbr[OriginalChain] not in noEVMChains:
                         if tokenPair['fromAccount'] == '0x0000000000000000000000000000000000000000':
-                            assetType = AssetType.EVM
+                            assetType = 'EVM_coin'
                         elif tokenPair['fromAccountType'] == 'Erc20':
-                            assetType = AssetType.EVM_ERC20
+                            assetType = 'EVM_ERC20'
                         elif tokenPair['fromAccountType'] == 'Erc721':
-                            assetType = AssetType.EVM_ERC721
+                            assetType = 'EVM_ERC721'
                         elif tokenPair['fromAccountType'] == 'Erc1155':
-                            assetType = AssetType.EVM_ERC1155
+                            assetType = 'EVM_ERC1155'##
+                    #2.1.1 asset type: XRP
                     elif chainAbbr[OriginalChain] == 'XRP':
                         if tokenPair['fromAccount'] == '0x0000000000000000000000000000000000000000':
-                            assetType = AssetType.XRP
+                            assetType = 'XRP_coin'
                         elif tokenPair['fromAccountType'] == 'Erc20':
-                            assetType = AssetType.XRP_TOKEN
+                            assetType = 'XRP_token'
+                    #2.1.2 asset type: polkadot, main is 'DOT', test is 'WND'
                     elif chainAbbr[OriginalChain] in ['DOT','WND']:
                         if tokenPair['fromAccount'] == '0x0000000000000000000000000000000000000000':
-                            assetType = AssetType.DOT
-                    elif chainAbbr[OriginalChain]  == 'BTC':
+                            assetType = 'DOT_coin'
+                    #2.1.3 asset type: bitcoin
+                    elif chainAbbr[OriginalChain] == 'BTC':
                         if tokenPair['fromAccount'] == '0x0000000000000000000000000000000000000000':
-                            assetType = AssetType.BTC
+                            assetType = 'BTC_coin'
+                    #2.1.4 asset type: litecoin
                     elif chainAbbr[OriginalChain] == 'LTC':
                         if tokenPair['fromAccount'] == '0x0000000000000000000000000000000000000000':
-                            assetType = AssetType.LTC
+                            assetType = 'LTC_coin'
+                    #2.1.5 asset type: dogecoin
                     elif chainAbbr[OriginalChain] == 'DOGE':
                         if tokenPair['fromAccount'] == '0x0000000000000000000000000000000000000000':
-                            assetType = AssetType.DOGE
+                            assetType = 'DOGE_coin'
+                    #2.2 save result to assetCCDit
                     assetCCDit[asset]['OriginalChains'][OriginalChain]={'TokenAddr':tokenPair['fromAccount'],'ancestorDecimals': tokenPair['ancestorDecimals'],'assetType':assetType,'chainType':chainAbbr[OriginalChain],'ccType':'normal'}
-
-                # fill the MapChain part, current map token only support EVM ERC20/ERC721/ERC1155 token
+                #3.fill the MapChain part, current map token only support EVM ERC20/ERC721/ERC1155 token
                 MapChain = chainIdDict[tokenPair['toChainID']]
                 if not assetCCDit[asset]['MapChain'].get(MapChain):
-                    if chainAbbr[MapChain] not in noEVMChains:
+                    if chainAbbr[MapChain] not in noEVMChains: #this condition could be deleted actually, since current mapped chain only support evm chain
                         if tokenPair['fromAccountType'] == 'Erc20':
-                            assetType = AssetType.EVM_ERC20
+                            assetType = 'EVM_ERC20'
                         elif tokenPair['fromAccountType'] == 'Erc721':
-                            assetType = AssetType.EVM_ERC721
+                            assetType = 'EVM_ERC721'
                         elif tokenPair['fromAccountType'] == 'Erc1155':
-                            assetType = AssetType.EVM_ERC1155
-                    ## tag special cross type, need add asset to original chains if the asset is pool token
+                            assetType = 'EVM_ERC1155'
+                    else :
+                        pass
+                    #3.1 since the pool token is real asset which means not mapptoken, this asset need add to OriginalChains part.
                     if int(tokenPair['id']) in poolTokenIDList:
+
                         assetCCDit[asset]['OriginalChains'][MapChain] = {'TokenAddr': tokenPair['toAccount'],'ancestorDecimals': tokenPair.get('decimals',tokenPair['ancestorDecimals']), 'assetType': assetType, 'chainType': chainAbbr[MapChain],'ccType':'pool'}
-                    assetCCDit[asset]['MapChain'][MapChain] = {'TokenAddr':tokenPair['toAccount'],'decimals':tokenPair.get('decimals',tokenPair['ancestorDecimals']),'assetType':assetType,'chainType':chainAbbr[MapChain]}
-                    # summary mapped chains
+                    # 3.2 mapped token add to mapchain part.
+                    else:
+                        assetCCDit[asset]['MapChain'][MapChain] = {'TokenAddr':tokenPair['toAccount'],'decimals':tokenPair.get('decimals',tokenPair['ancestorDecimals']),'assetType':assetType,'chainType':chainAbbr[MapChain]}
+                    #4. summary mapped chains
                     supportMapChains.append(MapChain)
-        #delete the original chain from mappchain dic
+        #5. since the direct bridge token paris impact, need remove these assets from mapchain who are also in original chain
         for asset,assetDetail in assetCCDit.items():
             oriChains = list(assetDetail['OriginalChains'].keys())
             for chain in oriChains:
                 assetDetail['MapChain'].pop(chain,'')
         return assetCCDit,list(set(supportMapChains))
-    def batchGetEvmMintedTokenTotalSupply(self,providers: dict, callsDic: dict, assetCCDit: dict, chainAbbr: dict,chainAbbr_reverse: dict):
-        '''
-        :param net: main/test
-        :param  providers: {"ETH":"http://eth.rpc","WAN":"https://wan.rpc"}
-                callsDic: 'https://github.com/Nevquit/configW/blob/main/muticallcallsBatch_{}.json'.format(net)
-                assetCCDit:'https://github.com/Nevquit/configW/blob/main/crossAssetsDict_{}.json'.format(net)
-                chainAbbr:'https://github.com/Nevquit/configW/blob/main/chainType.json'
-                chainAbbr_reverse :'https://github.com/Nevquit/configW/blob/main/chainType_Reverse.json'
-        :return: result: unit ETH  # {"TotallSupply":"Ethereum":{'USDT': 185891455, 'USDC': 62836966799090123418}}}
-        '''
-        result_raw = {"TotallSupply": {}}
-        result = {"TotallSupply": {}}
-
-        # Put the calls to list based chain, {'WAN':[calls],'ETH':[calls]}
-        for ast, infos in assetCCDit.items():
-            for chainname, tokenInfo in infos['MapChain'].items():
-                if tokenInfo['assetType'] == 'token_evm':
-                    callsDic[chainAbbr[chainname]].append(eCall(tokenInfo['TokenAddr'], 'totalSupply()(uint256)', [['{}'.format(ast), to_baseUnit]]))
-        # get the totall supply via chain
-        for chainType, calls in callsDic.items():
-            multiTotallSupply = EMultilCall(calls, _w3=Web3(Web3.HTTPProvider(providers[chainType])))()
-            result_raw["TotallSupply"][chainType] = multiTotallSupply
-        # summarize the token total supply for the different chains
-        for chainType, asstsDic in result_raw['TotallSupply'].items():
-            for asset, value in asstsDic.items():
-                decimals = int(assetCCDit[asset]['MapChain'][chainAbbr_reverse[chainType]]['decimals'])
-                if not result['TotallSupply'].get(asset, None):
-                    result['TotallSupply'][asset] = int(value) / (1 * 10 ** decimals)
-                else:
-                    result['TotallSupply'][asset] += int(value) / (1 * 10 ** decimals)
-        return result
-    def batchGetEvmTokenBalance(self,providers,tokenInfo: dict, evmLockedAccount: list, chainType):
-        '''
-        :param tokenInfo:
-            {
-                "USDT": {
-                    "TokenAddr": "0000",
-                    "ancestorDecimals": "6"
-                },
-                "USDC": {
-                    "TokenAddr": "0000",
-                    "ancestorDecimals": "6"
-                }
-            }
-        :param evmLockedAccounts:['0x01','0x02']
-        :param chainType:
-        :param providers: {"ETH":"http://eth.rpc","WAN":"https://wan.rpc"}
-        :return:
-                {
-                    "ETH": {
-                        "USDT": 100,   #unit: ETH
-                        "USDC": 300
-                    }
-                }
-        '''
-        result = {chainType: {}}
-        calls = []
-        for asset, tokenScInfo in tokenInfo.items():
-            calls.append(eCall(tokenScInfo['TokenAddr'], ['balanceOf(address)(uint256)', evmLockedAccount],[['{}'.format(asset), to_baseUnit]]))
-        multiCallResult = EMultilCall(calls, _w3=Web3(Web3.HTTPProvider(providers[chainType])))()
-        for asset, tokenScInfo in tokenInfo.items():
-            try:
-                if not result[chainType].get(asset, None):
-                    result[chainType][asset] = {}
-                result[chainType][asset] = int(multiCallResult[asset]) / (1 * 10 ** int(tokenScInfo['ancestorDecimals']))
-            except:
-                result[chainType][asset] = None
-        return result
-    def batchGetEvmLockedTokenBalance(self,providers,assetCCDit: dict):
-        '''
-        :param providers: {"ETH":"http://eth.rpc","WAN":"https://wan.rpc"}
-        :param accs: evmLocked accounts
-        :param chainType:
-        :return:
-        '''
-        #init
-        tokenChain_dics = {}
-        result = {'evmLockedAmount':{}}
-        '''
-        {
-                "ETH": {
-                    "USDT": {
-                        "TokenAddr": "0000",
-                        "ancestorDecimals": "6"
-                    },
-                    "USDC": {
-                        "TokenAddr": "0000",
-                        "ancestorDecimals": "6"
-                    }
-                },
-                "WAN": {
-                    "USDT": {
-                        "TokenAddr": "0000",
-                        "ancestorDecimals": "6"
-                    },
-                    "USDC": {
-                        "TokenAddr": "0000",
-                        "ancestorDecimals": "6"
-                    }
-                }
-        }
-        '''
-        #classify evm token info based chain
-        for asset, infos in assetCCDit.items():
-            for chain, tokenInfo in infos['OriginalChains']:
-                if tokenInfo['TokenAddr'] != '0x0000000000000000000000000000000000000000' and tokenInfo['assetType'] == "token_evm":
-                    if not tokenChain_dics.get(tokenInfo['chainType']):
-                        tokenChain_dics[tokenInfo['chainType']] = {}
-                    tokenChain_dics[tokenInfo['chainType']].update({asset: {'TokenAddr': tokenInfo['TokenAddr'], 'ancestorDecimals': tokenInfo['ancestorDecimals']}})
-
-        #batch get token balance based chain
-        for chainType, tokensInfo in tokenChain_dics.items():
-            TokenBalance = self.batchGetEvmTokenBalance(providers,tokensInfo, self.evmLockedAccounts[chainType],chainType)
-            for asset, lockedAmount in TokenBalance[chainType].items():
-                if not result['evmLockedAmount'].get(asset):
-                    result['evmLockedAmount'][asset] = 0
-                if lockedAmount != None:
-                    result['evmLockedAmount'][asset] += lockedAmount
-                else:
-                    result['evmLockedAmount'][asset] = None
-        return result
 
 if __name__ == '__main__':
     iWAN_Config = 'E:\Automation\github\cross_asset_monitor\.iWAN_config.json'
-    net = 'test'
+    net = 'main'
     chainInfo = json.loads('''{
                 "main": {
                     "1073741826": {
@@ -731,7 +603,11 @@ if __name__ == '__main__':
 }''')
     token_utl = TokenPairsUtility(net,iWAN_Config,chainInfo,crossPoolTokenInfo,evmChainCrossSc)
 
-    print(token_utl.get_token_pairs())
-
+    # print(token_utl.get_token_pairs())
+    # print(token_utl.get_xrp_token_pairs())
+    # crosschiandicts = token_utl.get_asset_crosschain_dict()
+    # print(crosschiandicts)
+    # print(json.dumps(crosschiandicts[0]))
+    # print(json.dumps(crosschiandicts[1]))
 
 

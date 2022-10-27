@@ -1,6 +1,8 @@
 from iWAN import iWAN #pip install iWAN
 import json
 from BalanceSpider import BtcBalanceSpider,XrpBalanceSpider
+from monitor_utility.utility_evm_multicall import EMultilCall, eCall,to_baseUnit
+from web3 import Web3
 import traceback
 import monitor_utility.get_balance_via_iwan as iwan_balance
 import monitor_utility.get_balance_via_rpc_evm as evm_balance
@@ -170,7 +172,7 @@ class BalanceUtility:
         if balance_pool:
             self.pprint(balance_pool)
             return max(balance_pool,key=balance_pool.count)
-    def get_evm_token_balance(self,spider = False,**kwargs):
+    def get_evm_erc20_token_balance(self,spider = False,**kwargs):
         balance_pool = []
         #get balance from iwan
         try:
@@ -193,7 +195,7 @@ class BalanceUtility:
         if balance_pool:
             self.pprint(balance_pool)
             return max(balance_pool,key=balance_pool.count)
-    def get_evm_token_totalsupply(self,spider = False,**kwargs):
+    def get_evm_erc20_token_totalsupply(self,spider = False,**kwargs):
         balance_pool = []
         #get balance from iwan
         try:
@@ -216,7 +218,130 @@ class BalanceUtility:
         if balance_pool:
             self.pprint(balance_pool)
             return max(balance_pool,key=balance_pool.count)
+    #TODO: test
+    def batch_get_evm_multi_chain_erc20_token_total_supply(self,providers: dict, callsDic: dict, assetCCDit: dict, chainAbbr: dict,chainAbbr_reverse: dict):
+        '''
+        :param net: main/test
+        :param  providers: {"ETH":"http://eth.rpc","WAN":"https://wan.rpc"}
+                callsDic: 'https://github.com/Nevquit/configW/blob/main/muticallcallsBatch_{}.json'.format(net)
+                assetCCDit:'https://github.com/Nevquit/configW/blob/main/crossAssetsDict_{}.json'.format(net)
+                chainAbbr:'https://github.com/Nevquit/configW/blob/main/chainType.json'
+                chainAbbr_reverse :'https://github.com/Nevquit/configW/blob/main/chainType_Reverse.json'
+        :return: result: unit ETH  # {"TotallSupply":"Ethereum":{'USDT': 185891455, 'USDC': 62836966799090123418}}}
+        '''
+        result_raw = {"TotallSupply": {}}
+        result = {"TotallSupply": {}}
 
+        # Put the calls to list based chain, {'WAN':[calls],'ETH':[calls]}
+        for ast, infos in assetCCDit.items():
+            for chainname, tokenInfo in infos['MapChain'].items():
+                if tokenInfo['assetType'] == "EVM_ERC20":
+                    callsDic[chainAbbr[chainname]].append(eCall(tokenInfo['TokenAddr'], 'totalSupply()(uint256)', [['{}'.format(ast), to_baseUnit]]))
+        # get the totall supply via chain
+        for chainType, calls in callsDic.items():
+            multiTotallSupply = EMultilCall(calls, _w3=Web3(Web3.HTTPProvider(providers[chainType])))()
+            result_raw["TotallSupply"][chainType] = multiTotallSupply
+        # summarize the token total supply for the different chains
+        for chainType, asstsDic in result_raw['TotallSupply'].items():
+            for asset, value in asstsDic.items():
+                decimals = int(assetCCDit[asset]['MapChain'][chainAbbr_reverse[chainType]]['decimals'])
+                if not result['TotallSupply'].get(asset, None):
+                    result['TotallSupply'][asset] = int(value) / (1 * 10 ** decimals)
+                else:
+                    result['TotallSupply'][asset] += int(value) / (1 * 10 ** decimals)
+        return result
+    #TODO: test
+    def batch_get_evm_single_chain_erc20_token_balance(self,provider,tokenInfo: dict, evm_accounts: list, chainType):
+        '''
+        :param tokenInfo:
+            {
+                "USDT": {
+                    "TokenAddr": "0000",
+                    "ancestorDecimals": "6"
+                },
+                "USDC": {
+                    "TokenAddr": "0000",
+                    "ancestorDecimals": "6"
+                }
+            }
+        :param evm_accounts:['0x01','0x02']
+        :param chainType: 'WAN','ETH'
+        :param provider: "http://eth.rpc"
+        :return:
+                {
+                    "ETH": {
+                        "USDT": 100,   #unit: ETH
+                        "USDC": 300
+                    }
+                }
+        '''
+        result = {chainType: {}}
+        calls = []
+        for asset, tokenScInfo in tokenInfo.items():
+            calls.append(eCall(tokenScInfo['TokenAddr'], ['balanceOf(address)(uint256)', evm_accounts],[['{}'.format(asset), to_baseUnit]]))
+        multiCallResult = EMultilCall(calls, _w3=Web3(Web3.HTTPProvider(provider)))()
+        for asset, tokenScInfo in tokenInfo.items():
+            try:
+                if not result[chainType].get(asset, None):
+                    result[chainType][asset] = {}
+                result[chainType][asset] = int(multiCallResult[asset]) / (1 * 10 ** int(tokenScInfo['ancestorDecimals']))
+            except:
+                result[chainType][asset] = None
+        return result
+    #TODO: test
+    def batch_get_evm_multi_chain_erc20_token_balance(self,providers,evm_accounts:dict,assetCCDit: dict):
+        '''
+        :param providers: {"ETH":"http://eth.rpc","WAN":"https://wan.rpc"}
+        :param evm_accounts: {"ETH":['0x01','0x02'],"WAN":['0x01','0x02']}
+        :return:
+        '''
+        tokenChain_dics = {} #store the token info per chain
+        result = {'evmLockedAmount':{}}
+        '''
+        {
+                "ETH": {
+                    "USDT": {
+                        "TokenAddr": "0000",
+                        "ancestorDecimals": "6"
+                    },
+                    "USDC": {
+                        "TokenAddr": "0000",
+                        "ancestorDecimals": "6"
+                    }
+                },
+                "WAN": {
+                    "USDT": {
+                        "TokenAddr": "0000",
+                        "ancestorDecimals": "6"
+                    },
+                    "USDC": {
+                        "TokenAddr": "0000",
+                        "ancestorDecimals": "6"
+                    }
+                }
+        }
+        '''
+        #classify evm token info to different chain dictionary
+        for asset, infos in assetCCDit.items():
+            for chain, tokenInfo in infos['OriginalChains']:
+                if tokenInfo['assetType'] == "EVM_ERC20":
+                    if not tokenChain_dics.get(tokenInfo['chainType']):
+                        tokenChain_dics[tokenInfo['chainType']] = {}
+                    tokenChain_dics[tokenInfo['chainType']].update({asset: {'TokenAddr': tokenInfo['TokenAddr'], 'ancestorDecimals': tokenInfo['ancestorDecimals']}})
+
+        #batch get token balance per chain
+        for chainType, tokensInfo in tokenChain_dics.items():
+            provider = providers[chainType]
+            evm_locked_accounts = evm_accounts[chainType]
+            tokenBalances = self.batch_get_evm_erc20_token_balance(provider,tokensInfo, evm_locked_accounts[chainType],chainType)
+            for asset, lockedAmount in tokenBalances[chainType].items():
+                if not result['evmLockedAmount'].get(asset):
+                    result['evmLockedAmount'][asset] = 0
+                if lockedAmount != None:
+                    result['evmLockedAmount'][asset] += lockedAmount
+                else:
+                    result['evmLockedAmount'][asset] = None
+        return result
 if __name__ == '__main__':
     utl = BalanceUtility('main','E:\Automation\wanchain_monitor\config\.iWAN_config.json',print_flag=False)
     # dotkwargs = {'nodes':[''],'address':'15FbT22gc9aqT1DFyfxUyPerbhyY36F4ATXFmKRVBBRvqLYF'}
@@ -227,8 +352,9 @@ if __name__ == '__main__':
     # print(utl.get_xrp_token_balance(**xrpkwargs))
     # ethkwargs = {'chain':'WAN','nodes':[""],"address":'0xe85b0D89CbC670733D6a40A9450D8788bE13da47'}
     # print(utl.get_evm_coin_balance(**ethkwargs))
-    ethkwargs = {'chain':'WAN','nodes':["https://gwan-ssl.wandevs.org:56891","https://gwan-ssl.wandevs.org:56891"],"address":'0xe85b0D89CbC670733D6a40A9450D8788bE13da47',"token_address":"0x6e11655d6aB3781C6613db8CB1Bc3deE9a7e111F"}
-    print(utl.get_evm_token_balance(**ethkwargs))
-    print(utl.get_evm_token_totalsupply(**ethkwargs))
+    # ethkwargs = {'chain':'WAN','nodes':["https://gwan-s**","https://gwan-s**"],"address":'0xe85b0D89CbC670733D6a40A9450D8788bE13da47',"token_address":"0x6e11655d6aB3781C6613db8CB1Bc3deE9a7e111F"}
+    # print(utl.get_evm_token_balance(**ethkwargs))
+    # print(utl.get_evm_token_totalsupply(**ethkwargs))
+
 
 

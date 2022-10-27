@@ -1,3 +1,7 @@
+'''
+Author:GuoWei
+Purpose: Update the chaininfo.json to the github
+'''
 import requests
 import base64
 import json

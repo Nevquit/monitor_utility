@@ -1,6 +1,10 @@
-from multicall import Call, Multicall
+'''
+Author: GuoWei
+Purpose: It's a muticall function for evm chain
+'''
+from multicall import Call, Multicall #https://github.com/banteg/multicall.py
 from web3 import Web3
-import requests
+
 def from_baseUnit(decimal):
     '''
     :param value:
@@ -13,7 +17,6 @@ def from_baseUnit(decimal):
 def to_baseUnit(value):
     '''
     :param value:
-    :param decimal: 1e8,1e18,....
     :return:
     '''
     return int(value)
@@ -21,7 +24,7 @@ def to_baseUnit(value):
 class EMultilCall(Multicall):
     def __init__(self,muticall_addresses):
         '''
-        para: 'https://raw.githubusercontent.com/Nevquit/configW/main/MULTICALL_ADDRESSES.json'
+        parameter: muticall_addresses, e.g.'https://raw.githubusercontent.com/Nevquit/configW/main/MULTICALL_ADDRESSES.json'
         '''
         super(EMultilCall, self).__init__(muticall_addresses)
         self.muticall_addresses = muticall_addresses
@@ -44,9 +47,8 @@ class EMultilCall(Multicall):
 class eCall(Call):
     pass
 
-
-
 if __name__ == '__main__':
+    rpc = 'https:/***'
     calls = [Call('0x07FDb4e8f8E420d021B9abEB2B1f6DcE150Ef77c','totalSupply()(uint256)',[['ToTallSupply', to_baseUnit]]),Call('0xc8F5b26589392fDE84eE0482e2b5a77DFbE943Fc','totalSupply()(uint256)',[['ToTall2Supply', to_baseUnit]])]
-    multi = EMultilCall(calls,_w3=Web3(Web3.HTTPProvider('https://gwan-ssl.wandevs.org:46891')))
+    multi = EMultilCall(calls,_w3=Web3(Web3.HTTPProvider(rpc)))
     print(multi())

@@ -1,3 +1,7 @@
+'''
+Author: GuoWei
+Purpose: Provide some small tools for use, will keep updating long term
+'''
 from web3 import Web3
 import json
 class Web3SimpleUtil:

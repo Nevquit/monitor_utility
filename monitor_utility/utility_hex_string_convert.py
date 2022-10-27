@@ -1,5 +1,6 @@
 '''
 Author: Guo Wei
+Purpose: Make the converting easy for string and hexsting
 '''
 
 def hexstring_to_string(hex_string):
@@ -14,5 +15,6 @@ def string_to_hexstring(string,length=0):
     _ = "{:#0" + str(length) + "X}"  # {:#066X}
     return _.format(int(string.encode('ascii').hex(), 16)).lower()
 
-print(hexstring_to_string('784249424C780000000000000000000000000000'))
-print(string_to_hexstring('xBIBLx'))
+if __name__ == '__main__':
+    print(hexstring_to_string('784249424C780000000000000000000000000000'))
+    print(string_to_hexstring('xBIBLx'))
